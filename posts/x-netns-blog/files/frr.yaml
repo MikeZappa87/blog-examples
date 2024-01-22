@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: router
+  namespace: default
+  annotations:
+    k8s.v1.cni.cncf.io/networks: cust01-network
+spec:
+  containers:
+    ##- image: praqma/network-multitool #docker pull praqma/network-multitool
+    - image: frrouting/frr
+      command:
+        - "ip"
+        - "netns"
+        - "exec"
+        - "bgp"
+        - "/sbin/tini"
+        - "--"
+        - "/usr/lib/frr/docker-start"
+      imagePullPolicy: IfNotPresent
+      name: router
+      volumeMounts:
+        - mountPath: /run/netns/bgp
+          name: bgp-volume
+        - mountPath: /etc/frr
+          name: config-volume
+      securityContext: #If you comment this out, then the container doesn't have the ability to do anything priv like 'ip a, ip r'
+        privileged: true
+  volumes:
+    - name: bgp-volume
+      hostPath:
+        # directory location on host
+        path: /run/netns/1234567
+    - name: config-volume
+      configMap:
+        name: frr-daemons
